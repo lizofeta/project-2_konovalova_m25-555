@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "project-2-konovalova-m25-555"
+version = "0.1.0"
+description = "Primitive Database"
+authors = ["Elizaveta Konovalova <Eliza050203@yandex.ru>"]
+readme = "README.md"
+
+packages = [
+    {include = "src"}
+]
+
+[tool.poetry.scripts]
+project = "src.primitive_db.main:main"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
