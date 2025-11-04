@@ -49,10 +49,10 @@ make database
 
 Возможные команды:
 
-<command> create_table <имя_таблицы> <столбец1:тип> <столбец2:тип> .. - создать таблицу
-<command> list_tables - показать список всех таблиц
-<command> drop_table <имя_таблицы> - удалить таблицу
-<command> exit - выход из программы
-<command> help - справочная информация
+- <command> create_table <имя_таблицы> <столбец1:тип> <столбец2:тип> .. - создать таблицу
+- <command> list_tables - показать список всех таблиц
+- <command> drop_table <имя_таблицы> - удалить таблицу
+- <command> exit - выход из программы
+- <command> help - справочная информация
 
 ## Asciinema 
