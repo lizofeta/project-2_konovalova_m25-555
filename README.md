@@ -56,3 +56,13 @@ make database
 - <command> help - справочная информация
 
 ## Asciinema 
+Пример использования в записи
+- Установка пакета 
+- Запуск базы данных
+- Проверка таблиц
+- Создание таблицы
+- Удаление таблицы
+
+[![asciicast](https://asciinema.org/a/lSUarc50DaorhZybwLOVScBSG.svg)](https://asciinema.org/a/lSUarc50DaorhZybwLOVScBSG)
+
+Link: https://asciinema.org/a/lSUarc50DaorhZybwLOVScBSG
