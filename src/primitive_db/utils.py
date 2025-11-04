@@ -1,5 +1,7 @@
-import os
 import json
+import os
+
+DB_METADATA_FILE = 'db_meta.json'
 
 def load_metadata(filepath: str) -> dict:
     """

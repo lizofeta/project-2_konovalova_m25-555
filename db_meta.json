@@ -1,0 +1,19 @@
+{
+    "stuff": {
+        "columns": {
+            "ID": "int",
+            "first_name": "str",
+            "second_name": "str",
+            "last_name": "str",
+            "salary": "int",
+            "age": "int"
+        }
+    },
+    "products": {
+        "columns": {
+            "ID": "int",
+            "product_name": "str",
+            "producer": "str"
+        }
+    }
+}
