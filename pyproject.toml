@@ -15,6 +15,7 @@ database = "src.primitive_db.main:main"
 [tool.poetry.dependencies]
 python = "^3.12"
 prompt = "^0.4.1"
+prettytable = "^3.16.0"
 
 
 [tool.poetry.group.dev.dependencies]

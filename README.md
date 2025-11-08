@@ -66,3 +66,19 @@ make database
 [![asciicast](https://asciinema.org/a/lSUarc50DaorhZybwLOVScBSG.svg)](https://asciinema.org/a/lSUarc50DaorhZybwLOVScBSG)
 
 Link: https://asciinema.org/a/lSUarc50DaorhZybwLOVScBSG
+
+
+## CRUD-операции
+
+- insert into <имя_таблицы> values (<значение1>, <значение2>, ...) - создать запись.
+- select from <имя_таблицы> where <столбец> = <значение> - прочитать записи по условию.
+- select from <имя_таблицы> - прочитать все записи.
+- update <имя_таблицы> set <столбец1> = <новое_значение1> where <столбец_условия> = <значение_условия> - обновить запись.
+- delete from <имя_таблицы> where <столбец> = <значение> - удалить запись.
+- info <имя_таблицы> - вывести информацию о таблице.
+
+Демонстрация всех команд:
+
+[![asciicast](https://asciinema.org/a/aUNMGN4pya4Ii2ZT9PuaZnZ1S.svg)](https://asciinema.org/a/aUNMGN4pya4Ii2ZT9PuaZnZ1S)
+
+Link: https://asciinema.org/a/aUNMGN4pya4Ii2ZT9PuaZnZ1S
