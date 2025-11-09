@@ -11,6 +11,7 @@ packages = [
 
 [tool.poetry.scripts]
 database = "src.primitive_db.main:main"
+project = "src.primitive_db.main:main"
 
 [tool.poetry.dependencies]
 python = "^3.12"
