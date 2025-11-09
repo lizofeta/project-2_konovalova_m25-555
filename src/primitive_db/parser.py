@@ -1,3 +1,6 @@
+from src.decorators import handle_db_errors
+
+
 def define_value_type(value):
     if value.lower() == 'true':
         return True
@@ -8,11 +11,22 @@ def define_value_type(value):
     else:
         return str(value)
 
-TYPE_MAPPING = {
-    'str': str, 
-    'int': int,
-    'bool': bool 
-}
+@handle_db_errors
+def insert_columns_parser(columns: list) -> dict:
+    """
+    Парсит строку с названием и типом столбцов в словарь.
+    Пример: "name:str" -> {'name': 'str'}
+
+    Вызывает ValueError, если:
+    - Описание столбца введено в неправильном формате.
+    """
+    for column in columns:
+        if ":" not in column:
+            raise ValueError('Неверный формат ' 
+                        'записи описания столбца.\n'
+                        'Ожидается: <имя_столбца:тип>')
+    columns_dict = {column.split(':')[0] : column.split(':')[1] for column in columns}
+    return columns_dict
 
 def where_clause_parser(clause: list) -> dict:
     """

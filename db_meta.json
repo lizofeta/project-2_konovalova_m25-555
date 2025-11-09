@@ -1,19 +1,78 @@
 {
-    "stuff": {
+    "users": {
         "columns": {
             "ID": "int",
-            "first_name": "str",
-            "second_name": "str",
-            "last_name": "str",
-            "salary": "int",
-            "age": "int"
-        }
+            "name": "str",
+            "age": "int",
+            "is_active": "bool"
+        },
+        "data": [
+            {
+                "ID": 1,
+                "name": "Alireza",
+                "age": 20,
+                "is_active": true
+            },
+            {
+                "ID": 2,
+                "name": "Sveta",
+                "age": 100,
+                "is_active": false
+            },
+            {
+                "ID": 3,
+                "name": "Ariana",
+                "age": 21,
+                "is_active": true
+            },
+            {
+                "ID": 4,
+                "name": "Arnold",
+                "age": 100,
+                "is_active": false
+            },
+            {
+                "ID": 5,
+                "name": "Marina",
+                "age": 100,
+                "is_active": false
+            },
+            {
+                "ID": 6,
+                "name": "Leonardo",
+                "age": 100,
+                "is_active": false
+            },
+            {
+                "ID": 7,
+                "name": "Lena",
+                "age": 17,
+                "is_active": true
+            },
+            {
+                "ID": 8,
+                "name": "Petr",
+                "age": 100,
+                "is_active": false
+            }
+        ]
     },
     "products": {
         "columns": {
             "ID": "int",
             "product_name": "str",
-            "producer": "str"
-        }
+            "producer": "str",
+            "price": "int",
+            "category": "str"
+        },
+        "data": [
+            {
+                "ID": 1,
+                "product_name": "Galaxy_S25",
+                "producer": "Samsung",
+                "price": 80000,
+                "category": "Phone"
+            }
+        ]
     }
 }

@@ -1,8 +1,13 @@
+import json
+
 from prettytable import PrettyTable
 
-from src.primitive_db.parser import TYPE_MAPPING, define_value_type
+from src.decorators import confirm_action, create_cacher, handle_db_errors, log_time
+from src.primitive_db.constants import ALLOWED_TYPES, TYPE_MAPPING
+from src.primitive_db.parser import define_value_type
 
 
+@handle_db_errors
 def create_table(metadata: dict, table_name: str, columns: list) -> dict:
     """
     Создает новую таблицу в метаданных.
@@ -10,7 +15,7 @@ def create_table(metadata: dict, table_name: str, columns: list) -> dict:
     Принимает:
         metadata (dict): текущий словарь метаданных
         table_name (str): название новой таблицы
-        columns (list): список строк, описывающих столбцы таблицы 
+        columns (dict): словарь, описывающий столбцы таблицы 
     
     Возвращает:
         metadata (dict): обновленный словарь метаданных с случае успеха.
@@ -25,19 +30,18 @@ def create_table(metadata: dict, table_name: str, columns: list) -> dict:
 
     if table_name in metadata:
         raise ValueError(f'Таблица с именем "{table_name}" уже существует.')
+    if not isinstance(columns, dict):
+        raise TypeError('Не удалось создать столбцы.')
     if not all(isinstance(col, str) for col in columns):
         raise TypeError('Описание столбца должно иметь строковый тип.')
 
-    ALLOWED_TYPES = {'str', 'int', 'bool'}
-
     processed_columns = {}
     
-    columns_dict = {col.split(':')[0] : col.split(':')[1] for col in columns}
-    if 'id' not in list(columns_dict.keys()):
+    if 'id' not in list(columns.keys()):
         id_column = ['ID', 'int']
         processed_columns[id_column[0]] = id_column[1]
 
-    for col_name, col_type in columns_dict.items():
+    for col_name, col_type in columns.items():
         if col_type not in ALLOWED_TYPES:
             raise ValueError((f"Некорректный тип данных '{col_type}'" 
                               f" для столбца '{col_name}'.\n"
@@ -56,7 +60,8 @@ def create_table(metadata: dict, table_name: str, columns: list) -> dict:
     print(f"Таблица с именем '{table_name}' успешно создана со столбцами: {column_display}.") #noqa: E501
     return metadata 
 
-
+@confirm_action("удаление таблицы")
+@handle_db_errors
 def drop_table(metadata: dict, table_name: str) -> dict:
     """
     Удаляет таблицу из метаданных.
@@ -74,19 +79,25 @@ def drop_table(metadata: dict, table_name: str) -> dict:
     if table_name not in metadata:
         raise ValueError(f"Таблицы '{table_name}' не существует.")
     del metadata[table_name]
-    print(f"Таблица с именем '{table_name}' успешно удалена.")
     return metadata
 
-
+@handle_db_errors
 def list_tables(metadata: dict) -> list:
     """
     Возвращает список имен всех таблиц в метаданных.
     """
     return list(metadata.keys())
 
+@handle_db_errors
+@log_time
 def insert(metadata: dict, table_name: str, values: list) -> dict:
     """
     Добавляет записи в таблицу.
+
+    Вызывает ValueError, если:
+    - Таблица с указанным названием не найдена.
+    - Количество введенных значений не совпадает с количеством столбцов в таблице.
+    - Введен неверный тип данных для столбца.
     """
     if table_name not in metadata:
         raise ValueError(f'Таблицы {table_name} нет.')
@@ -110,7 +121,7 @@ def insert(metadata: dict, table_name: str, values: list) -> dict:
         value = define_value_type(values[i])
         column_name = column_names[i + 1]
         if not isinstance(value, expected_type):
-            raise TypeError((f'Неверный тип данных для столбца {column_name}.\n'
+            raise ValueError((f'Неверный тип данных для столбца {column_name}.\n'
                              f'Ожидался: {expected_type}\n'
                              f'Получен: {type(value)}.\n'
                               'Попробуйте снова.'))
@@ -122,11 +133,9 @@ def insert(metadata: dict, table_name: str, values: list) -> dict:
 
     return metadata
 
+@handle_db_errors
 def create_row_filter_function(column, value, all_column_names):
-    try:
-        column_index = all_column_names.index(column)
-    except ValueError:
-        return lambda row: False
+    column_index = all_column_names.index(column)
     def row_filter(row):
         if column_index < len(row):
             return row[column_index] == value 
@@ -134,41 +143,67 @@ def create_row_filter_function(column, value, all_column_names):
             return False
     return row_filter
 
+
+query_cacher = create_cacher()
+@handle_db_errors
+@log_time
 def select(table_data: dict, where_clause=None) -> PrettyTable:
     """
     Если не передано условие фильтрации, выводит на экран всю таблицу.
     Если задано условие фильтрации, выводит только нужную строку.
 
+    Использует механизм кэширования: 
+    - если запрос вызывался ранее, он будет возвращен из кэша.
+    - если запрос не вызывался, он будет сформирован и сохранен в кэш.
+
     Вызывает ValueError, если:
     - Передан неверный тип данных для столбца.
+    - Таблица с указанным названием не найдена.
     """
-    if not table_data:
-        raise ValueError('Такой таблицы нет.')
-    column_names = list(table_data['columns'].keys())
-    rows = [list(row.values()) for row in table_data['data']]
-    table = PrettyTable()
-    table.field_names = column_names
-    table.add_rows(rows)
-    if not where_clause:
-        return table
+    key_data_part = json.dumps(table_data, sort_keys=True)
+    key_where_part = json.dumps(where_clause, sort_keys=True) if where_clause else 'NONE' #noqa: E501
+    cache_key = (key_data_part, key_where_part)
+
+    def execute_query():
+        if not table_data:
+            raise ValueError('Такой таблицы нет.')
+        column_names = list(table_data['columns'].keys())
+        data = table_data.get('data')
+        if data:
+            rows = [list(row.values()) for row in table_data['data']]
+        else:
+            rows = []
+        table = PrettyTable()
+        table.field_names = column_names
+        table.add_rows(rows)
+        if not where_clause:
+            return table
+        else:
+            column_name = list(where_clause.keys())[0]
+            column_type = table_data['columns'][column_name]
+            expected_type = TYPE_MAPPING[column_type]
+            value = where_clause[column_name]
+            if not isinstance(value, expected_type):
+                raise ValueError((f'Неверный тип данных для столбца "{column_name}"\n'
+                                        f'Ожидался: {expected_type}\n'
+                                        f'Получен: {type(value)}'))
+            filter_function = create_row_filter_function(column_name, value, column_names) #noqa: E501
+            return table.get_string(row_filter=filter_function)
+    if cache_key:
+        result = query_cacher(cache_key, execute_query)
     else:
-        column_name = list(where_clause.keys())[0]
-        column_type = table_data['columns'][column_name]
-        expected_type = TYPE_MAPPING[column_type]
-        value = where_clause[column_name]
-        if not isinstance(value, expected_type):
-            raise ValueError((f'Неверный тип данных для столбца "{column_name}"\n'
-                                    f'Ожидался: {expected_type}\n'
-                                    f'Получен: {type(value)}'))
-        filter_function = create_row_filter_function(column_name, value, column_names)
-        return table.get_string(row_filter=filter_function)
+        result = execute_query()
+    return result
 
 
 def update(table_data: dict, set_clause: dict, where_clause: dict) -> dict:
     """
     Обновляет значение в таблице по заданному условию.
     Возвращает обновленную таблицу.
-    Вызывает ValueError, если указанной таблицы нет в базе данных.
+
+    Вызывает ValueError, если 
+    - Указанной таблицы нет в базе данных.
+    - Введен неверный тип данных для столбца.
     """
     if not table_data:
         raise ValueError('Такой таблицы нет.')
@@ -202,12 +237,16 @@ def update(table_data: dict, set_clause: dict, where_clause: dict) -> dict:
 
     return table_data
 
+@confirm_action("удаление записи")
+@handle_db_errors
 def delete(table_data: dict, where_clause: dict) -> dict:
     """
     Функция находит записи по условию и удаляет их.
     Сдвигает индексы.
     Возвращает измененные данные.
-    Вызывает ValueError, если указанной таблицы нет в базе данных.
+
+    Вызывает ValueError, если 
+    - Указанной таблицы нет в базе данных.
     """
     if not table_data:
         raise ValueError('Такой таблицы нет.')
@@ -224,10 +263,13 @@ def delete(table_data: dict, where_clause: dict) -> dict:
 
     return table_data
 
+@handle_db_errors
 def info(table_data: dict, table_name: str) -> None:
     """
     Выводит информацио о таблице: название, столбцы, количество записей.
-    Вызывает ValueError, если указанной таблицы нет в базе данных.
+
+    Вызывает ValueError, если 
+    - Указанной таблицы нет в базе данных.
     """
     if not table_data:
         raise ValueError('Такой таблицы нет.')
